@@ -1,12 +1,13 @@
 """
 views.py — Heavy Machinery Rental Management System
-Adjust field names below to match your actual models.py if they differ.
 """
 from django.db.models import Sum, Q
 from django.utils import timezone
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Category, Machinery, Customer, Booking, Payment
 from .serializers import (
@@ -17,13 +18,12 @@ from .serializers import (
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
-    Read access for anyone authenticated; write access only for staff/owner.
-    Adjust is_staff check if you have a custom role field instead.
+    Public read access for GET/HEAD/OPTIONS; write access restricted to staff.
     """
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
-            return request.user and request.user.is_authenticated
-        return request.user and request.user.is_authenticated and request.user.is_staff
+            return True
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -35,17 +35,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class MachineryViewSet(viewsets.ModelViewSet):
     queryset = Machinery.objects.all()
     serializer_class = MachinerySerializer
-    permission_classes = [IsOwnerOrReadOnly]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        category_id = self.request.query_params.get('category')
-        available = self.request.query_params.get('available')
-        if category_id:
-            qs = qs.filter(category_id=category_id)
-        if available is not None:
-            qs = qs.filter(availability_status=(available.lower() == 'true'))
-        return qs
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['category', 'status']
+    search_fields = ['name']
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -54,10 +47,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Non-staff customers should only see their own record
         if self.request.user.is_staff:
             return Customer.objects.all()
-        return Customer.objects.filter(user=self.request.user)  # adjust if Customer links differently to auth user
+        return Customer.objects.filter(user=self.request.user)
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -112,7 +104,7 @@ class DashboardViewSet(viewsets.ViewSet):
         today = timezone.now().date()
         overdue_bookings = Booking.objects.filter(
             end_date__lt=today,
-            status='confirmed',  # not yet marked returned/completed
+            status='confirmed',
         )
         serializer = BookingSerializer(overdue_bookings, many=True)
         return Response(serializer.data)
