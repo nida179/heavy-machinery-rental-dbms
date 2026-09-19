@@ -3,7 +3,9 @@
 A web-based system that digitalizes an offline heavy machinery / earth-moving equipment rental business in Karachi. Customers can browse and book machinery online, while the owner manages inventory, bookings, and payments from one place.
 
 **Course:** Database Management Systems (CS-452), Dr. S.M. Khalid
+
 **University:** UBIT, University of Karachi
+
 **Team:** Nida Hafeez and Fatima Fahad
 
 ---
