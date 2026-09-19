@@ -28,45 +28,77 @@ class CustomerSerializer(serializers.ModelSerializer):
             'password': {'write_only': True}  # remove this line if Customer has no password field
         }
 
-
 class BookingSerializer(serializers.ModelSerializer):
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
-    machinery_name = serializers.CharField(source='machinery.name', read_only=True)
+    customer_name = serializers.CharField(
+        source='cust.name',
+        read_only=True
+    )
+
+    machinery_name = serializers.CharField(
+        source='machine.name',
+        read_only=True
+    )
 
     class Meta:
         model = Booking
         fields = '__all__'
-        read_only_fields = ('total_amount',)  # remove if you don't auto-calculate this
+        read_only_fields = ('total_cost',)
 
     def validate(self, data):
         """
-        Booking-conflict validation: prevent double-booking the same machinery
-        for overlapping date ranges.
+        Prevent overlapping bookings for the same machinery.
         """
-        machinery = data.get('machinery') or getattr(self.instance, 'machinery', None)
-        start_date = data.get('start_date') or getattr(self.instance, 'start_date', None)
-        end_date = data.get('end_date') or getattr(self.instance, 'end_date', None)
 
-        if start_date and end_date and start_date > end_date:
-            raise serializers.ValidationError("start_date must be before end_date.")
+        machine = data.get(
+            'machine',
+            getattr(self.instance, 'machine', None)
+        )
 
-        if machinery and start_date and end_date:
+        start_datetime = data.get(
+            'start_datetime',
+            getattr(self.instance, 'start_datetime', None)
+        )
+
+        end_datetime = data.get(
+            'end_datetime',
+            getattr(self.instance, 'end_datetime', None)
+        )
+
+        # Check dates
+        if start_datetime and end_datetime:
+            if start_datetime >= end_datetime:
+                raise serializers.ValidationError(
+                    "End date/time must be after start date/time."
+                )
+
+        # Check overlapping bookings
+        if machine and start_datetime and end_datetime:
+
             conflicting = Booking.objects.filter(
-                machinery=machinery,
-                status__in=['pending', 'confirmed'],  # adjust to match your status choices
-                start_date__lte=end_date,
-                end_date__gte=start_date,
+                machine=machine,
+                status__in=[
+                    'Pending',
+                    'Approved',
+                    'Ongoing'
+                ],
+                start_datetime__lt=end_datetime,
+                end_datetime__gt=start_datetime,
             )
+
+            # When updating an existing booking,
+            # don't compare it against itself.
             if self.instance:
-                conflicting = conflicting.exclude(pk=self.instance.pk)
+                conflicting = conflicting.exclude(
+                    pk=self.instance.pk
+                )
 
             if conflicting.exists():
                 raise serializers.ValidationError(
-                    "This machinery is already booked for an overlapping date range."
+                    "This machinery is already booked "
+                    "for the selected time period."
                 )
+
         return data
-
-
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment

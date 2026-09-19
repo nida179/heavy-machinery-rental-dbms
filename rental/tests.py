@@ -68,10 +68,10 @@ class RentalAPITestCase(APITestCase):
     def test_dashboard_stats_admin_only(self):
         """Dashboard endpoint is strictly accessible by staff/admins."""
         self.client.force_authenticate(user=self.regular_user)
-        res_user = self.client.get('/api/dashboard/')
+        res_user = self.client.get('/api/dashboard/revenue/')
         self.assertEqual(res_user.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_authenticate(user=self.admin_user)
-        res_admin = self.client.get('/api/dashboard/')
+        res_admin = self.client.get('/api/dashboard/revenue/')
         self.assertEqual(res_admin.status_code, status.HTTP_200_OK)
         self.assertIn('total_revenue', res_admin.data)

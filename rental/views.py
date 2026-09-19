@@ -22,7 +22,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
-            return request.user and request.user.is_authenticated
+            return True
         return request.user and request.user.is_authenticated and request.user.is_staff
 
 
@@ -35,7 +35,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class MachineryViewSet(viewsets.ModelViewSet):
     queryset = Machinery.objects.all()
     serializer_class = MachinerySerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -77,7 +77,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def approve(self, request, pk=None):
         booking = self.get_object()
-        booking.status = 'confirmed'
+        booking.status = 'Approved'
         booking.save()
         return Response({'status': 'booking confirmed'})
 
