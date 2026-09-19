@@ -140,7 +140,5 @@ python manage.py test
 
 ## Contributors
 
-| Name | Contribution |
-|---|---|
-| Nida Hafeez | Category, Customer, Payment models; serializers; URL routing; frontend setup |
-| Fatima Fahad | Machinery and Booking models; views; tests; seed data |
+- Nida Hafeez
+- Fatima Fahad
